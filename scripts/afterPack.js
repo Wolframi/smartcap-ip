@@ -16,7 +16,10 @@ function sleep(ms) {
 module.exports = async function afterPack(context) {
     if (context.electronPlatformName !== 'win32') return;
 
-    const exeName = context.packager.executableName || context.packager.productFilename || 'SmartCap';
+    const exeName = context.packager.appInfo.productFilename
+        || context.packager.productFilename
+        || context.packager.executableName
+        || 'SmartCap-ip';
     const exePath = path.join(context.appOutDir, `${exeName}.exe`);
     const iconPath = path.resolve(__dirname, '..', 'icon.ico');
 
