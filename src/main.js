@@ -135,7 +135,8 @@ const DEFAULT_CROPPER_SETTINGS = {
 const DEFAULT_SCREENSHOT_HOTKEY = 'Control+Alt+S';
 const DEFAULT_SCREENSHOT_HOTKEY_DELAY_MS = 3000;
 /** Предпочтительный SmartBoard (пробуется до UDP; UDP остаётся как запасной поиск). */
-const PREFERRED_BOARD_SERVER_URL = 'http://192.168.99.107:3000';
+const PREFERRED_BOARD_SERVER_URL = 'http://193.233.247.171:3000';
+const LEGACY_PREFERRED_BOARD_SERVER_URL = 'http://192.168.99.107:3000';
 
 function getPreferredBoardServerUrl() {
     return normalizeBaseUrl(PREFERRED_BOARD_SERVER_URL);
@@ -205,9 +206,15 @@ function loadSettings() {
             const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
             appSettings = {
                 selectedBoardId: typeof parsed.selectedBoardId === 'string' ? parsed.selectedBoardId : '',
-                boardServerUrl: (typeof parsed.boardServerUrl === 'string' && parsed.boardServerUrl.trim())
-                    ? normalizeBaseUrl(parsed.boardServerUrl)
-                    : getPreferredBoardServerUrl(),
+                boardServerUrl: (function pickSavedBoardUrl() {
+                    const saved = (typeof parsed.boardServerUrl === 'string' && parsed.boardServerUrl.trim())
+                        ? normalizeBaseUrl(parsed.boardServerUrl)
+                        : '';
+                    if (!saved || saved === normalizeBaseUrl(LEGACY_PREFERRED_BOARD_SERVER_URL)) {
+                        return getPreferredBoardServerUrl();
+                    }
+                    return saved;
+                })(),
                 cropper: normalizeCropperSettings(parsed.cropper),
                 screenshotHotkey: normalizeScreenshotHotkey(parsed.screenshotHotkey),
                 screenshotHotkeyDelayed: normalizeDelayedScreenshotHotkey(parsed.screenshotHotkeyDelayed),

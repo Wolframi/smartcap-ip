@@ -340,14 +340,17 @@
         const nameEl = document.getElementById('fio-overlay-input');
         if (nameEl) nameEl.value = (currentAuthor && String(currentAuthor).trim()) ? String(currentAuthor).trim() : '';
         if (ipEl) {
-            ipEl.value = boardUrlToInputValue(boardServerUrl);
-            if (!ipEl.value) {
-                ipcRenderer.invoke('peek-board-base-url').then((u) => {
-                    if (ipEl && !ipEl.value) ipEl.value = boardUrlToInputValue(u);
-                }).catch(() => {});
-            }
+            const fallbackHost = '193.233.247.171:3000';
+            ipEl.value = boardUrlToInputValue(boardServerUrl) || fallbackHost;
+            ipcRenderer.invoke('peek-board-base-url').then((u) => {
+                if (!ipEl) return;
+                const peeked = boardUrlToInputValue(u);
+                if (peeked && !boardUrlToInputValue(boardServerUrl)) ipEl.value = peeked;
+            }).catch(() => {
+                if (ipEl && !ipEl.value) ipEl.value = fallbackHost;
+            });
         }
-        const focusEl = (ipEl && !ipEl.value) ? ipEl : (nameEl || ipEl);
+        const focusEl = nameEl || ipEl;
         if (focusEl) focusEl.focus();
     }
     function hideFioOverlay(clearPending = true) {
