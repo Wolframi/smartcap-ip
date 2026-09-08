@@ -313,19 +313,6 @@
     }
     bindBoardSelectors();
 
-    function boardUrlToInputValue(url) {
-        const s = String(url || '').trim();
-        if (!s) return '';
-        try {
-            const u = new URL(/^https?:\/\//i.test(s) ? s : `http://${s}`);
-            const host = String(u.hostname || '').trim();
-            if (!host) return s.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-            return u.port ? `${host}:${u.port}` : host;
-        } catch (e) {
-            return s.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-        }
-    }
-
     function showFioOverlay() {
         const el = document.getElementById('fio-overlay');
         if (!el) return;
@@ -336,22 +323,11 @@
         } else {
             positionFioForm(el);
         }
-        const ipEl = document.getElementById('fio-overlay-ip');
         const nameEl = document.getElementById('fio-overlay-input');
-        if (nameEl) nameEl.value = (currentAuthor && String(currentAuthor).trim()) ? String(currentAuthor).trim() : '';
-        if (ipEl) {
-            const fallbackHost = '193.233.247.171:3000';
-            ipEl.value = boardUrlToInputValue(boardServerUrl) || fallbackHost;
-            ipcRenderer.invoke('peek-board-base-url').then((u) => {
-                if (!ipEl) return;
-                const peeked = boardUrlToInputValue(u);
-                if (peeked && !boardUrlToInputValue(boardServerUrl)) ipEl.value = peeked;
-            }).catch(() => {
-                if (ipEl && !ipEl.value) ipEl.value = fallbackHost;
-            });
+        if (nameEl) {
+            nameEl.value = (currentAuthor && String(currentAuthor).trim()) ? String(currentAuthor).trim() : '';
+            nameEl.focus();
         }
-        const focusEl = nameEl || ipEl;
-        if (focusEl) focusEl.focus();
     }
     function hideFioOverlay(clearPending = true) {
         const el = document.getElementById('fio-overlay');
@@ -430,18 +406,15 @@
         initDateInputs();
     }
     document.getElementById('fio-overlay-ok').addEventListener('click', async () => {
-        const ipEl = document.getElementById('fio-overlay-ip');
         const input = document.getElementById('fio-overlay-input');
-        const ipRaw = (ipEl && ipEl.value) ? ipEl.value.trim() : '';
         const v = (input && input.value) ? input.value.trim() : '';
-        if (!ipRaw) { showCropperNotice('Введите IP доски, например 192.168.1.10', 6000); return; }
         const err = validateFioCropper(v);
         if (err) { showCropperNotice(err, 6000); return; }
 
         const okBtn = document.getElementById('fio-overlay-ok');
         if (okBtn) okBtn.disabled = true;
         try {
-            const connected = await ipcRenderer.invoke('set-board-server-url', ipRaw);
+            const connected = await ipcRenderer.invoke('set-board-server-url', '');
             if (!connected || !connected.ok || !connected.url) {
                 showCropperNotice((connected && connected.error) || 'Не удалось подключиться к доске.', 7000);
                 return;
@@ -462,7 +435,7 @@
             }
         } catch (e) {
             if (isSmartBoardNetworkFailure(e)) notifyMainSmartBoardUnreachable();
-            showCropperNotice('Ошибка сети. Проверьте IP и что сервер SmartBoard запущен.', 6000);
+            showCropperNotice('Ошибка сети. Проверьте, что доска доступна.', 6000);
             return;
         } finally {
             if (okBtn) okBtn.disabled = false;
@@ -485,21 +458,11 @@
         fioCancelBtn.addEventListener('click', () => hideFioOverlay());
     }
     const fioInput = document.getElementById('fio-overlay-input');
-    const fioIp = document.getElementById('fio-overlay-ip');
     if (fioInput) {
         fioInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 document.getElementById('fio-overlay-ok').click();
-            }
-        });
-    }
-    if (fioIp) {
-        fioIp.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                if (fioInput) fioInput.focus();
-                else document.getElementById('fio-overlay-ok').click();
             }
         });
     }

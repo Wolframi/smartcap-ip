@@ -135,8 +135,7 @@ const DEFAULT_CROPPER_SETTINGS = {
 const DEFAULT_SCREENSHOT_HOTKEY = 'Control+Alt+S';
 const DEFAULT_SCREENSHOT_HOTKEY_DELAY_MS = 3000;
 /** Предпочтительный SmartBoard (пробуется до UDP; UDP остаётся как запасной поиск). */
-const PREFERRED_BOARD_SERVER_URL = 'http://193.233.247.171:3000';
-const LEGACY_PREFERRED_BOARD_SERVER_URL = 'http://192.168.99.107:3000';
+const PREFERRED_BOARD_SERVER_URL = 'https://painting-experience-festival-ambien.trycloudflare.com';
 
 function getPreferredBoardServerUrl() {
     return normalizeBaseUrl(PREFERRED_BOARD_SERVER_URL);
@@ -206,15 +205,7 @@ function loadSettings() {
             const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
             appSettings = {
                 selectedBoardId: typeof parsed.selectedBoardId === 'string' ? parsed.selectedBoardId : '',
-                boardServerUrl: (function pickSavedBoardUrl() {
-                    const saved = (typeof parsed.boardServerUrl === 'string' && parsed.boardServerUrl.trim())
-                        ? normalizeBaseUrl(parsed.boardServerUrl)
-                        : '';
-                    if (!saved || saved === normalizeBaseUrl(LEGACY_PREFERRED_BOARD_SERVER_URL)) {
-                        return getPreferredBoardServerUrl();
-                    }
-                    return saved;
-                })(),
+                boardServerUrl: getPreferredBoardServerUrl(),
                 cropper: normalizeCropperSettings(parsed.cropper),
                 screenshotHotkey: normalizeScreenshotHotkey(parsed.screenshotHotkey),
                 screenshotHotkeyDelayed: normalizeDelayedScreenshotHotkey(parsed.screenshotHotkeyDelayed),
@@ -477,7 +468,7 @@ function normalizeBaseUrl(url) {
     return s || '';
 }
 
-/** Разбор IP/хоста из поля ввода: 192.168.1.10, 192.168.1.10:3000 или полный URL. */
+/** Разбор хоста: IP, IP:порт или полный URL (для Cloudflare порт не добавляем). */
 function parseUserBoardHost(raw) {
     let s = String(raw == null ? '' : raw).trim();
     if (!s) return '';
@@ -487,9 +478,10 @@ function parseUserBoardHost(raw) {
         const u = new URL(s);
         const host = String(u.hostname || '').trim();
         if (!host) return '';
-        const port = u.port || '3000';
+        const isIpv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+        const port = u.port || (isIpv4 ? '3000' : '');
         const proto = (u.protocol === 'https:') ? 'https' : 'http';
-        return normalizeBaseUrl(`${proto}://${host}:${port}`);
+        return normalizeBaseUrl(port ? `${proto}://${host}:${port}` : `${proto}://${host}`);
     } catch (e) {
         return '';
     }
@@ -506,24 +498,6 @@ function formatBoardHostForInput(url) {
         return port ? `${host}:${port}` : host;
     } catch (e) {
         return base.replace(/^https?:\/\//i, '');
-    }
-}
-
-/** IP/хост из поля ввода → http(s)://host:port (порт по умолчанию 3000). */
-function parseUserBoardHost(raw) {
-    let s = String(raw == null ? '' : raw).trim();
-    if (!s) return '';
-    s = s.replace(/\\/g, '/');
-    if (!/^https?:\/\//i.test(s)) s = 'http://' + s;
-    try {
-        const u = new URL(s);
-        const host = String(u.hostname || '').trim();
-        if (!host) return '';
-        const port = u.port || '3000';
-        const proto = (u.protocol === 'https:') ? 'https' : 'http';
-        return normalizeBaseUrl(`${proto}://${host}:${port}`);
-    } catch (e) {
-        return '';
     }
 }
 
@@ -1672,13 +1646,13 @@ ipcMain.handle('peek-board-base-url', () => {
     return Promise.resolve(b || null);
 });
 ipcMain.handle('set-board-server-url', async (_event, raw) => {
-    const url = parseUserBoardHost(raw);
+    const url = parseUserBoardHost(raw) || getPreferredBoardServerUrl();
     if (!url) {
-        return { ok: false, error: 'Введите IP доски, например 192.168.1.10 или 192.168.1.10:3000' };
+        return { ok: false, error: 'Адрес доски не задан' };
     }
     const reachable = await probeBoardHealth(url, 4000);
     if (!reachable) {
-        return { ok: false, error: 'Не удалось подключиться к доске по этому IP. Проверьте адрес и что SmartBoard запущен.' };
+        return { ok: false, error: 'Не удалось подключиться к доске. Проверьте интернет и что SmartBoard запущен.' };
     }
     setBoardAvailable(url);
     return { ok: true, url, display: formatBoardHostForInput(url) };
