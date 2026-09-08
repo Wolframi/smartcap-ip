@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Capture</title>
+    <link rel="icon" href="../../icon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="cropper.css">
+</head>
+<body tabindex="-1">
+    <div id="float-backdrop"></div>
+    <div id="float-drag-overlay"></div>
+    <div id="float-frame"></div>
+    <div id="cropper-notice" role="status" aria-live="polite"></div>
+    <div id="fio-overlay" style="display:none;">
+        <h4 class="fio-overlay-title">Подключение к доске</h4>
+        <p class="fio-overlay-text">Укажите <strong>IP сервера SmartBoard</strong> и <strong>никнейм</strong>:</p>
+        <label class="fio-overlay-label" for="fio-overlay-ip">IP доски</label>
+        <input type="text" id="fio-overlay-ip" class="fio-overlay-input" placeholder="192.168.1.10 или 192.168.1.10:3000" maxlength="200" autocomplete="off" spellcheck="false">
+        <label class="fio-overlay-label" for="fio-overlay-input">Никнейм</label>
+        <input type="text" id="fio-overlay-input" class="fio-overlay-input" placeholder="Никнейм" maxlength="200" autocomplete="off">
+        <div class="form-actions fio-overlay-actions">
+            <button type="button" id="fio-overlay-cancel" class="form-btn form-cancel">Назад</button>
+            <button type="button" id="fio-overlay-ok" class="form-btn form-save">Подключиться</button>
+        </div>
+    </div>
+    <div id="canvas-wrapper">
+        <canvas id="bg-layer"></canvas>
+        <canvas id="blur-layer"></canvas>
+        <canvas id="dim-layer"></canvas>
+        <canvas id="draw-layer"></canvas>
+        <canvas id="pen-preview-layer"></canvas>
+        <div id="selection-handles" class="selection-handles" style="display:none;">
+            <div class="selection-handle" data-handle="nw"></div>
+            <div class="selection-handle" data-handle="n"></div>
+            <div class="selection-handle" data-handle="ne"></div>
+            <div class="selection-handle" data-handle="e"></div>
+            <div class="selection-handle" data-handle="se"></div>
+            <div class="selection-handle" data-handle="s"></div>
+            <div class="selection-handle" data-handle="sw"></div>
+            <div class="selection-handle" data-handle="w"></div>
+        </div>
+        <div id="draw-bar" class="toolbar">
+            <div class="tool-group">
+                <div class="tool-btn" id="btn-pen" title="Карандаш" onclick="setTool('pen')"><img class="tool-icon" src="../../ico/Карандаш.png" alt=""></div>
+                <div class="tool-btn" id="btn-line" title="Линия" onclick="setTool('line')"><img class="tool-icon" src="../../ico/линия.png" alt=""></div>
+                <div class="tool-btn" id="btn-arrow" title="Стрелка" onclick="setTool('arrow')"><img class="tool-icon" src="../../ico/Стрелка.png" alt=""></div>
+                <div class="tool-btn" id="btn-step" title="Нумерация" onclick="setTool('step')"><img class="tool-icon" src="../../ico/Нумерация.png" alt=""></div>
+                <div class="tool-btn" id="btn-rect" title="Прямоугольник" onclick="setTool('rect')"><img class="tool-icon" src="../../ico/Квадрат.png" alt=""></div>
+                <div class="tool-btn" id="btn-oval" title="Овал" onclick="setTool('oval')"><img class="tool-icon" src="../../ico/Круг.png" alt=""></div>
+                <div class="tool-btn" id="btn-blur" title="Размытие" onclick="setTool('blur')"><img class="tool-icon" src="../../ico/Замазывать.png" alt=""></div>
+                <div class="tool-btn" id="btn-text" title="Текст" onclick="setTool('text')"><img class="tool-icon" src="../../ico/Текст.png" alt=""></div>
+            </div>
+            <div class="divider"></div>
+            
+            <div id="tool-size-wrap" class="settings-group" title="Размер">
+                <div class="tool-size-rail" aria-hidden="true">
+                    <div class="tool-size-fill"></div>
+                    <div class="tool-size-thumb"></div>
+                </div>
+                <input type="range" id="tool-size-slider" min="2" max="20" step="1" value="10">
+            </div>
+            <div class="divider"></div>
+            
+            <div class="colors-row">
+                <div class="color-swatch" style="background: #ff0000; border-color: #ffaaaa;" onclick="setColor('#ff0000')"></div>
+                <div class="color-swatch" style="background: #00ff00; border-color: #aaffaa;" onclick="setColor('#00ff00')"></div>
+                <div class="color-swatch" style="background: #0000ff; border-color: #aaaaff;" onclick="setColor('#0000ff')"></div>
+            </div>
+            <div class="divider"></div>
+            
+            <div class="settings-group">
+                <div id="color-picker-wrap" title="Точный цвет">
+                    <div id="color-thumb"></div>
+                </div>
+                
+                <div id="opacity-wrap" title="Видимость линии (вправо — ярче)">
+                    <input type="range" id="opacity-slider" min="0" max="1" step="0.1" value="1" oninput="setOpacity(this.value)">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            
+            <div class="tool-btn" id="btn-undo" title="Отменить действие (Ctrl+Z)"><img class="tool-icon tool-icon-flip-x" src="../../ico/ОтменитьВернуть.png" alt=""></div>
+            <div class="tool-btn" id="btn-redo" title="Вернуть действие"><img class="tool-icon" src="../../ico/ОтменитьВернуть.png" alt=""></div>
+            <div class="tool-btn" id="btn-select-area" title="Во весь экран"><img class="tool-icon" id="btn-select-area-icon" src="../../ico/ВоВесьЭкран.png" alt=""></div>
+        </div>
+
+        <div id="side-bar" class="toolbar">
+    <div id="board-buttons-wrap" style="display:none;">
+        <div class="tool-btn btn-save" id="btn-open-form" title="Создать новую"><img class="tool-icon" src="../../ico/СозданиеКарточки.png" alt=""></div>
+        <div class="tool-btn btn-save" id="btn-open-update" title="Добавить к существующей"><img class="tool-icon" src="../../ico/Прикрепить.png" alt=""></div>
+    </div>
+    <div class="tool-btn btn-save" id="btn-copy" title="Копировать в буфер (Ctrl+C)"><img class="tool-icon" src="../../ico/Копирование.png" alt=""></div>
+    <div class="tool-btn btn-save" id="btn-save-disk" title="Сохранить в папку"><img class="tool-icon" src="../../ico/Сохранить.png" alt=""></div>
+    <div class="tool-btn btn-save" id="btn-settings" title="Настройки"><img class="tool-icon" src="../../ico/Настройки.png" alt=""></div>
+    <div class="tool-btn" id="btn-float" title="Открыть как плавающее окно" onclick="toggleFloatMode()"><img class="tool-icon" id="btn-float-icon" src="../../ico/Галочка.png" alt=""></div>
+    <div class="tool-btn btn-cancel" id="btn-cancel" title="Отмена"><img class="tool-icon" src="../../ico/Закрыть.png" alt=""></div>
+</div>
+
+        <div id="task-form">
+            <h4 style="margin: 0 0 10px 0; color:#28a745; font-size:14px;">СОЗДАТЬ НОВУЮ</h4>
+            <div class="form-row"><label>Доска</label><div class="board-select-wrap"><select id="inp-board-create"><option value="">-- Выберите доску --</option></select><img class="board-private-lock" src="../../ico/lock.svg" alt="" aria-hidden="true" hidden></div></div>
+            <div class="form-row"><label>Колонка</label><select id="inp-column"><option>Загрузка...</option></select></div>
+            <div class="form-row"><label>Название</label><input id="inp-title" placeholder="Название..." autofocus></div>
+            <div class="form-row"><label>Срок</label><input type="date" id="inp-date" style="color-scheme: dark;"></div>
+            <div class="form-row"><label>Описание</label><textarea id="inp-desc" rows="3" placeholder="Описание..."></textarea></div>
+            <div class="form-row form-participants-row">
+                <label>Участники</label>
+                <div id="form-participants-list" class="form-participants-list"></div>
+                <div class="form-participants-add">
+                    <button type="button" id="form-add-participant-btn" class="form-add-participant-btn">
+                        <img class="form-add-participant-icon" src="../../ico/Плюс.png" alt="">
+                        Добавить участников
+                    </button>
+                    <select id="form-participant-select" class="form-participant-select" style="display:none;"></select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="form-btn form-cancel" onclick="closeForms()">Назад</button>
+                <button class="form-btn form-save" id="form-submit">Сохранить</button>
+            </div>
+        </div>
+
+        <div id="update-form">
+            <h4 style="margin: 0 0 10px 0; color:#e74c3c; font-size:14px;">ДОБАВИТЬ СКРИНШОТ</h4>
+            <div id="update-form-loading" class="form-loading-indicator" style="display:none;"><span class="form-loading-dots"></span> Загрузка списка...</div>
+            <div class="form-row">
+                <label style="color:#aaa;">1. Выберите доску</label>
+                <div class="board-select-wrap">
+                    <select id="inp-board-update"></select>
+                    <img class="board-private-lock" src="../../ico/lock.svg" alt="" aria-hidden="true" hidden>
+                </div>
+            </div>
+            <div class="form-row">
+                <label style="color:#aaa;">2. Выберите колонку</label>
+                <select id="inp-upd-col" onchange="onUpdateColumnChanged()"></select>
+            </div>
+            <div class="form-row">
+                <label style="color:#aaa;">3. Выберите карточку</label>
+                <select id="inp-target-card" disabled style="opacity:0.5"><option>Сначала колонку...</option></select>
+            </div>
+            <div class="form-actions" style="margin-top: 20px;">
+                <button class="form-btn form-cancel" onclick="closeForms()">Назад</button>
+                <button class="form-btn" id="form-update-submit" style="background:#d35400; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">📎 Прикрепить</button>
+            </div>
+        </div>
+
+        <div id="settings-form">
+            <h4 class="settings-form-title">НАСТРОЙКИ</h4>
+            <nav class="settings-tabs settings-tabs-compact" aria-label="Разделы настроек">
+                <button type="button" class="settings-tab active" data-tab="board">Доска</button>
+                <button type="button" class="settings-tab" data-tab="hotkeys">Клавиши</button>
+            </nav>
+            <div id="cropper-settings-tab-board" class="settings-tab-panel active">
+                <label class="settings-toggle-row">
+                    <input type="checkbox" id="cropper-remember-create-defaults">
+                    <span>Закрепить доску и колонку для «Создать новую» и «Добавить к существующей»</span>
+                </label>
+                <p class="settings-board-note">С галочкой: закрепление накапливается (доска → колонка → карточка). Без галочки — последний выбор.</p>
+                <p id="cropper-remember-saved-label" class="remember-saved-label"></p>
+                <p id="cropper-board-hint" class="settings-panel-hint"></p>
+            </div>
+            <div id="cropper-settings-tab-hotkeys" class="settings-tab-panel" hidden>
+                <div class="settings-panel-row">
+                    <span class="settings-panel-label">Горячая клавиша</span>
+                    <button type="button" id="cropper-hotkey-btn" class="settings-hotkey-btn" title="Нажмите, чтобы изменить">Ctrl+Alt+S</button>
+                </div>
+                <div class="settings-panel-divider"></div>
+                <div class="settings-panel-row">
+                    <span class="settings-panel-label">Доп. комбинация</span>
+                    <button type="button" id="cropper-delayed-hotkey-btn" class="settings-hotkey-btn" title="Нажмите, чтобы изменить">Не задана</button>
+                </div>
+                <div class="settings-panel-row settings-panel-row-delay">
+                    <span class="settings-panel-label">Задержка перед захватом</span>
+                    <div class="settings-delay-wrap">
+                        <input type="number" id="cropper-delay-ms" class="settings-delay-input" min="0" max="60000" step="100" value="3000">
+                        <span class="settings-delay-unit">мс</span>
+                    </div>
+                </div>
+                <p id="cropper-settings-hint" class="settings-panel-hint"></p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-cancel" onclick="closeForms()">Назад</button>
+            </div>
+        </div>
+    </div>
+  <script src="js/state.js"></script>
+  <script src="js/smartboard-api.js"></script>
+  <script src="js/blur.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/selection.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/cropper-settings.js"></script>
+  <script src="js/text.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/float-mode.js"></script>
+  <script src="js/float-edit.js"></script>
+  <script src="js/forms.js"></script>
+  <script src="js/create-defaults.js"></script>
+  <script src="js/settings-board.js"></script>
+  <script src="js/cropper-settings-panel.js"></script>
+  <script src="js/cropper-app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1002 @@
+/* Сообщение поверх кроппера (без alert — не ломает фокус полноэкранного окна) */
+#cropper-notice {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 24px;
+    transform: translateX(-50%);
+    z-index: 99999;
+    max-width: min(92vw, 480px);
+    padding: 12px 18px;
+    background: rgba(30, 30, 30, 0.95);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* === ОСНОВНЫЕ СТИЛИ СТРАНИЦЫ === */
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+    /* Устанавливаем единый красивый шрифт для всей страницы */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+}
+
+#canvas-wrapper {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+}
+
+#bg-layer, #blur-layer, #dim-layer, #pen-preview-layer {
+    pointer-events: none;
+}
+
+#bg-layer { z-index: 1; }
+#blur-layer { z-index: 2; }
+#dim-layer { z-index: 3; }
+#draw-layer {
+    z-index: 4;
+    cursor: default;
+}
+#pen-preview-layer { z-index: 5; }
+
+.selection-handles {
+    position: absolute;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+}
+
+.selection-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    margin-left: -5px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: #007acc;
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+    touch-action: none;
+}
+
+/* Невидимые зоны resize/move поверх рамки — углы поверх сторон (z-index) */
+#selection-resize-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 98;
+    pointer-events: none;
+}
+body.float-edit #selection-resize-overlay {
+    display: none !important;
+}
+.selection-resize-hit {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    touch-action: none;
+    background: transparent;
+}
+.selection-resize-edge { z-index: 2; }
+.selection-move-hit { z-index: 1; }
+.selection-resize-corner { z-index: 5; }
+.selection-resize-nw, .selection-resize-se { cursor: nwse-resize; }
+.selection-resize-ne, .selection-resize-sw { cursor: nesw-resize; }
+.selection-resize-n, .selection-resize-s { cursor: ns-resize; }
+.selection-resize-e, .selection-resize-w { cursor: ew-resize; }
+.selection-move-n, .selection-move-s, .selection-move-e, .selection-move-w { cursor: move; }
+
+.selection-handle[data-handle="n"],
+.selection-handle[data-handle="s"] { cursor: ns-resize; }
+
+.selection-handle[data-handle="e"],
+.selection-handle[data-handle="w"] { cursor: ew-resize; }
+
+.selection-handle[data-handle="nw"],
+.selection-handle[data-handle="se"] { cursor: nwse-resize; }
+
+.selection-handle[data-handle="ne"],
+.selection-handle[data-handle="sw"] { cursor: nesw-resize; }
+
+/* === ПАНЕЛИ ИНСТРУМЕНТОВ === */
+.toolbar {
+    position: absolute;
+    background: #1e1e1e;
+    padding: 6px;
+    border-radius: 6px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+    display: none;
+    gap: 6px;
+    align-items: center;
+    z-index: 100;
+    border: 1px solid #333;
+}
+
+#draw-bar {
+    flex-direction: row;
+}
+
+#side-bar {
+    flex-direction: column;
+    gap: 8px;
+}
+
+#board-buttons-wrap {
+    margin: 0;
+    padding: 0;
+}
+
+/* Окно подключения: IP доски + никнейм */
+#fio-overlay {
+    position: absolute;
+    display: none;
+    background: #2b2b2b;
+    color: #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    border: 1px solid #444;
+    z-index: 150;
+    min-width: 320px;
+    max-width: 400px;
+}
+.fio-overlay-title { 
+    margin: 0 0 12px 0; 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: #f39c12;
+    text-transform: uppercase;
+}
+.fio-overlay-text { 
+    margin: 0 0 16px 0; 
+    font-size: 13px; 
+    line-height: 1.4;
+    color: #aaa;
+}
+.fio-overlay-label {
+    display: block;
+    margin: 0 0 6px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ccc;
+}
+.fio-overlay-input {
+    width: 100%; 
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 14px;
+}
+.fio-overlay-input:focus { outline: none; border-color: #007acc; }
+.fio-overlay-input::placeholder { color: #666; }
+.fio-overlay-actions {
+    margin-top: 0;
+}
+
+/* === КНОПКИ ИНСТРУМЕНТОВ === */
+.tool-group {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.tool-btn .tool-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    display: block;
+    pointer-events: none;
+    object-fit: contain;
+    object-position: center;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
+    transition: opacity 0.15s ease;
+}
+
+.tool-btn .tool-icon.tool-icon-flip-x {
+    transform: scaleX(-1);
+}
+
+.tool-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tool-btn:hover .tool-icon {
+    opacity: 1;
+}
+
+.tool-btn.active {
+    background: rgba(0, 122, 204, 0.38);
+    box-shadow: none;
+}
+
+.tool-btn.active .tool-icon {
+    opacity: 1;
+}
+
+.tool-btn.disabled {
+    opacity: 0.35;
+    filter: grayscale(1);
+    cursor: default;
+    pointer-events: none;
+    transform: none;
+}
+
+.quick-tooltip {
+    position: fixed;
+    z-index: 100000;
+    max-width: 220px;
+    padding: 5px 10px;
+    background: rgba(20, 20, 20, 0.96);
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    font-size: 12px;
+    line-height: 1.25;
+    pointer-events: none;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(5px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.quick-tooltip.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.divider {
+    width: 1px;
+    height: 32px;
+    background: #444;
+    margin: 0 3px;
+}
+
+/* === НАСТРОЙКИ (Цвет и Прозрачность) === */
+.colors-row {
+    display: flex;
+    gap: 6px;
+}
+
+.color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+}
+
+/* Выбор цвета */
+#color-picker-wrap {
+    width: 82px;
+    height: 10px;
+    position: relative;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid #555;
+    background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);
+}
+
+#color-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    pointer-events: none;
+}
+
+/* Прозрачность */
+#opacity-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #aaa;
+    font-size: 15px;
+}
+
+#opacity-slider {
+    width: 76px;
+    height: 4px;
+    cursor: pointer;
+    accent-color: #007acc;
+}
+
+#tool-size-wrap {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 24px;
+    cursor: ew-resize;
+}
+
+.tool-size-rail {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 5px;
+    transform: translateY(-50%);
+    border-radius: 3px;
+    pointer-events: none;
+    background-color: #3a3a3a;
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc((100% - 1px) / 18),
+        rgba(255, 255, 255, 0.14) calc((100% - 1px) / 18),
+        rgba(255, 255, 255, 0.14) calc(100% / 18)
+    );
+}
+
+.tool-size-fill {
+    height: 100%;
+    width: 0;
+    background: #007acc;
+    border-radius: 3px;
+    transition: none;
+}
+
+.tool-size-thumb {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 14px;
+    height: 14px;
+    margin-left: 0;
+    border-radius: 50%;
+    background: #007acc;
+    border: 2px solid #e8f4fc;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    transform: translate(-50%, -50%);
+    transition: none;
+    pointer-events: none;
+}
+
+#tool-size-wrap.is-stepping .tool-size-fill,
+#tool-size-wrap.is-stepping .tool-size-thumb {
+    transition: left 0.16s cubic-bezier(0.33, 1.15, 0.54, 1), width 0.16s cubic-bezier(0.33, 1.15, 0.54, 1);
+}
+
+#tool-size-slider {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    cursor: ew-resize;
+    opacity: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+}
+
+
+/* Поле ввода текста — прозрачный фон, рамка подстраивается под содержимое */
+.text-input-box {
+    position: fixed;
+    user-select: text;
+    -webkit-user-select: text;
+    background: transparent;
+    border: 1px solid rgba(0, 122, 204, 0.5);
+    border-radius: 2px;
+    outline: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    resize: none;
+    min-width: 0;
+    min-height: 0;
+    max-width: none;
+    max-height: none;
+    z-index: 9999;
+    cursor: text;
+    pointer-events: auto;
+    box-sizing: border-box;
+    overflow: hidden;
+    margin: 0;
+}
+
+.text-input-box:focus {
+    border-color: rgba(0, 122, 204, 0.9);
+}
+
+.text-input-box::placeholder {
+    color: rgba(128, 128, 128, 0.8);
+}
+
+/* === ФОРМЫ (ИСПРАВЛЕНИЕ ШРИФТОВ ЗДЕСЬ) === */
+#task-form, #update-form, #settings-form {
+    position: fixed;
+    background: #1e1e1e;
+    width: 300px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+    color: white;
+    z-index: 200;
+    display: none;
+    border: 1px solid #444;
+    box-sizing: border-box;
+    max-height: calc(100vh - 16px);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#settings-form {
+    border-color: #007acc;
+    width: 320px;
+}
+
+.settings-form-title {
+    margin: 0 0 12px;
+    font-size: 14px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #007acc;
+}
+
+#settings-form .settings-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+#settings-form .settings-tab {
+    flex: 1;
+    padding: 5px 6px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #2b2b2b;
+    color: #bbb;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+#settings-form .settings-tab.active {
+    background: #007acc;
+    border-color: #007acc;
+    color: #fff;
+}
+
+#settings-form .settings-tab-panel {
+    display: none;
+}
+
+#settings-form .settings-tab-panel.active {
+    display: block;
+}
+
+#settings-form .settings-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #ddd;
+    cursor: pointer;
+    user-select: none;
+}
+
+#settings-form .settings-toggle-row input {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    accent-color: #007acc;
+    cursor: pointer;
+}
+
+#settings-form .settings-board-note {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+}
+
+#settings-form .remember-saved-label {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #81c784;
+    line-height: 1.35;
+    min-height: 14px;
+    white-space: pre-line;
+}
+
+.settings-panel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 30px;
+}
+
+.settings-panel-row-delay {
+    margin-top: 8px;
+}
+
+.settings-panel-label {
+    color: #888;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.settings-hotkey-btn {
+    min-width: 108px;
+    padding: 5px 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #2b2b2b;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+}
+
+.settings-hotkey-btn:hover {
+    border-color: #666;
+    background: #333;
+}
+
+.settings-hotkey-btn.recording {
+    border-color: #007acc;
+    box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.35);
+    color: #7ec8ff;
+}
+
+.settings-panel-divider {
+    margin: 10px 0;
+    border-top: 1px solid #3a3a3a;
+}
+
+.settings-panel-hint {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #777;
+    min-height: 14px;
+    line-height: 1.35;
+}
+
+.settings-panel-hint.error {
+    color: #ff8a80;
+}
+
+.settings-panel-hint.ok {
+    color: #81c784;
+}
+
+.settings-delay-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.settings-delay-input {
+    width: 72px;
+    padding: 4px 8px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #2b2b2b;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    text-align: right;
+}
+
+.settings-delay-input:focus {
+    outline: none;
+    border-color: #007acc;
+}
+
+.settings-delay-unit {
+    color: #888;
+    font-size: 11px;
+}
+
+#update-form {
+    border-color: #e74c3c;
+}
+
+h4 {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.form-row {
+    margin-bottom: 12px;
+}
+
+.form-row label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.board-select-wrap {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    width: 100%;
+}
+.board-select-wrap select {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    padding-right: 36px;
+}
+.board-private-lock {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+    align-self: center;
+    width: 14px;
+    height: 14px;
+    margin-right: 28px;
+    pointer-events: none;
+    object-fit: contain;
+    opacity: 0.9;
+    filter: brightness(0) invert(0.85);
+}
+
+/* !!! ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ ПОЛЕЙ ВВОДА !!! */
+.form-row input,
+.form-row select,
+.form-row textarea {
+    width: 100%;
+    background: #2b2b2b; /* Чуть светлее фона формы для контраста */
+    border: 1px solid #555;
+    color: #fff;
+    padding: 8px; /* Чуть больше воздуха */
+    border-radius: 4px;
+    
+    /* Принудительно ставим тот же шрифт, что и у body */
+    font-family: inherit; 
+    font-size: 13px;
+    line-height: 1.4;
+    
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+/* Исправление конкретно для календаря */
+input[type="date"] {
+    color-scheme: dark; /* Делает иконку календаря белой */
+    font-family: inherit; /* Убирает моноширинный шрифт */
+}
+
+/* Исправление конкретно для описания */
+textarea {
+    resize: vertical; /* Разрешаем менять высоту */
+    font-family: inherit; /* Убирает моноширинный шрифт */
+    min-height: 60px;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+    outline: none;
+    border-color: #007acc;
+    background: #333;
+}
+
+#inp-target-card {
+    background: #252525;
+    font-weight: bold;
+}
+
+.form-participants-row label { margin-bottom: 6px; }
+.form-participants-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 24px; max-height: 88px; overflow-x: hidden; overflow-y: auto; align-items: flex-start; align-content: flex-start; }
+.form-participants-empty { font-size: 11px; color: #888; }
+.form-participant-chip { display: inline-flex; align-items: center; gap: 4px; background: #3c3c3c; color: #ddd; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+.form-participant-creator { background: #1e3a2f; color: #7fdb9a; }
+.form-participant-remove { background: none; border: none; color: #888; cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1; }
+.form-participant-remove:hover { color: #e74c3c; }
+.form-participants-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.form-participants-add button { background: #007acc; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+.form-participants-add button:hover { background: #005a9e; }
+.form-add-participant-btn { display: inline-flex; align-items: center; gap: 6px; }
+.form-add-participant-icon { width: 14px; height: 14px; object-fit: contain; flex-shrink: 0; pointer-events: none; filter: brightness(0) invert(1); }
+.form-participant-select { padding: 5px 8px; border-radius: 4px; border: 1px solid #555; background: #2b2b2b; color: #ddd; font-size: 12px; min-width: 140px; }
+
+/* Индикатор загрузки в форме «К старой» */
+.form-loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    color: #aaa;
+    font-size: 13px;
+}
+.form-loading-dots {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #555;
+    border-top-color: #007acc;
+    border-radius: 50%;
+    animation: form-loading-spin 0.8s linear infinite;
+}
+@keyframes form-loading-spin {
+    to { transform: rotate(360deg); }
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.form-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit; /* Шрифт кнопок */
+}
+
+.form-cancel {
+    background: transparent;
+    color: #aaa;
+    border: 1px solid #444;
+}
+
+.form-cancel:hover {
+    color: #fff;
+    border-color: #666;
+}
+
+.form-save {
+    background: #28a745;
+    color: white;
+}
+
+.form-save:hover {
+    background: #218838;
+}
+
+/* === FLOAT EDIT (независимое плавающее окно-редактор) === */
+
+/* Float: прозрачный фон; клик-сквозь — setIgnoreMouseEvents в float-edit.js. */
+html.float-edit,
+body.float-edit {
+    width: 100vw !important;
+    height: 100vh !important;
+    min-width: 100vw !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background-color: transparent !important;
+    -webkit-app-region: no-drag !important;
+}
+
+body.float-edit {
+    display: block !important;
+    position: relative !important;
+}
+
+/* Слой-ловушка отключён — клики по пустоте уходят в Windows. */
+#float-backdrop {
+    display: none !important;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background-color: rgba(0, 0, 0, 0.03);
+    pointer-events: none !important;
+    -webkit-app-region: no-drag;
+    cursor: default;
+}
+
+body.float-edit #float-backdrop {
+    display: none !important;
+}
+
+/* Холст — размер скриншота (top/left/width/height — inline из seedFloatEditImage) */
+body.float-edit #canvas-wrapper {
+    position: fixed;
+    width: auto;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    z-index: 90;
+    pointer-events: none;
+}
+
+/* Панели — fixed по сохранённым координатам, не при bottom: 0 всего окна */
+body.float-edit #draw-bar,
+body.float-edit #side-bar {
+    position: fixed !important;
+    bottom: auto !important;
+    right: auto !important;
+}
+
+/* Холст — рисуем на draw-layer; перетаскивание только через overlay в float-move */
+body.float-edit canvas {
+    -webkit-app-region: no-drag !important;
+}
+
+body.float-edit #bg-layer,
+body.float-edit #blur-layer,
+body.float-edit #dim-layer {
+    pointer-events: none;
+}
+
+body.float-edit #draw-layer {
+    pointer-events: auto;
+}
+
+/* preview только для отрисовки — клики на draw-layer */
+body.float-edit #pen-preview-layer {
+    pointer-events: none;
+}
+
+body.float-edit.float-move #draw-layer {
+    cursor: move;
+}
+
+#float-drag-overlay {
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Панели, формы, кнопки и поля — кликабельны */
+body.float-edit .toolbar,
+body.float-edit .tool-btn,
+body.float-edit #task-form,
+body.float-edit #update-form,
+body.float-edit #settings-form,
+body.float-edit #fio-overlay,
+body.float-edit button,
+body.float-edit input,
+body.float-edit select,
+body.float-edit textarea,
+body.float-edit .text-input-box {
+    -webkit-app-region: no-drag !important;
+    pointer-events: auto !important;
+}
+
+/* Тулбары — поверх картинки; меню не обрезается overflow панели */
+body.float-edit .toolbar,
+body.float-edit #draw-bar,
+body.float-edit #side-bar,
+body.float-edit #board-buttons-wrap {
+    overflow: visible !important;
+}
+
+/* Всё изображение — это «выделение», затемнение и ручки не нужны */
+body.float-edit #dim-layer {
+    opacity: 0 !important;
+}
+body.float-edit #selection-handles {
+    display: none !important;
+}
+
+/* В плавающем окне кнопка «галочка» — свернуть; SmartBoard и настройки остаются */
+body.float-edit #btn-float {
+    display: inline-flex !important;
+}
+
+/* Рамка вокруг плавающего скриншота (позиция задаётся в float-edit.js) */
+#float-frame {
+    display: none;
+    position: fixed;
+    border: 2px solid rgba(160, 160, 160, 0.55);
+    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 99;
+    transition: border-color 0.15s ease;
+}
+body.float-edit #float-frame {
+    display: block;
+}
+/* Активное окно — Esc / Ctrl+Z работают здесь (еле заметнее серой рамки) */
+body.float-edit.float-window-focused #float-frame {
+    border-color: rgba(0, 81, 255, 0.911);
+    box-shadow: none;
+}
+
+/* Панели и кнопки в плавающем окне — поверх hit-слоя и скриншота */
+body.float-edit .toolbar,
+body.float-edit #draw-bar,
+body.float-edit #side-bar,
+body.float-edit #board-buttons-wrap {
+    z-index: 130 !important;
+}
+
+/* Формы SmartBoard — поверх float-окна, справа от панели, без обрезки max-height */
+body.float-edit #task-form,
+body.float-edit #update-form,
+body.float-edit #settings-form,
+body.float-edit #fio-overlay {
+    position: fixed;
+    z-index: 250;
+    max-height: none !important;
+    overflow-x: hidden;
+    overflow-y: visible;
+    -webkit-app-region: no-drag !important;
+    pointer-events: auto !important;
+    background-color: #1e1e1e !important;
+}
+
+body.float-edit #settings-form {
+    background-color: #1e1e1e !important;
+}
+
+body.float-edit #fio-overlay {
+    background-color: #2b2b2b !important;
+}
+
+/* Дочерние элементы форм не наследуют drag и не пропускают клики сквозь прозрачность */
+body.float-edit #task-form *,
+body.float-edit #update-form *,
+body.float-edit #settings-form *,
+body.float-edit #fio-overlay * {
+    -webkit-app-region: no-drag;
+    pointer-events: auto;
+}

@@ -1,0 +1,221 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-size: 13px;
+    color: #e4e4e4;
+    background: #2a2a2a;
+    overflow: hidden;
+}
+
+.settings {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 12px 14px 10px;
+}
+
+.settings-tab-panel.active {
+    display: block;
+    flex: 1 1 auto;
+}
+
+.settings-header {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.settings-tab {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #252525;
+    color: #bbb;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.settings-tab:hover {
+    background: #2e2e2e;
+    color: #eee;
+}
+
+.settings-tab.active {
+    background: #007acc;
+    border-color: #007acc;
+    color: #fff;
+}
+
+.settings-tab-panel {
+    display: none;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.settings-tab-panel.active {
+    display: block;
+}
+
+.setting-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #ddd;
+    cursor: pointer;
+    user-select: none;
+}
+
+.setting-toggle-row input {
+    margin-top: 2px;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    accent-color: #007acc;
+    cursor: pointer;
+}
+
+.settings-board-note {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+}
+
+.remember-saved-label {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: #81c784;
+    line-height: 1.35;
+    min-height: 14px;
+    white-space: pre-line;
+}
+
+.settings-section {
+    flex: 0 0 auto;
+}
+
+.settings-section-divider {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.setting-row-delay {
+    margin-top: 8px;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 30px;
+}
+
+.setting-label {
+    color: #b0b0b0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.hotkey-btn {
+    min-width: 108px;
+    padding: 5px 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: center;
+}
+
+.hotkey-btn:hover {
+    border-color: #666;
+    background: #252525;
+}
+
+.hotkey-btn.recording {
+    border-color: #007acc;
+    box-shadow: 0 0 0 1px rgba(0, 122, 204, 0.35);
+    color: #7ec8ff;
+}
+
+.hint {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: #777;
+    min-height: 14px;
+    line-height: 1.35;
+}
+
+.hint.error {
+    color: #ff8a80;
+}
+
+.hint.ok {
+    color: #81c784;
+}
+
+.delay-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.delay-input {
+    width: 72px;
+    padding: 4px 8px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: #fff;
+    font-size: 12px;
+    font-family: inherit;
+    text-align: right;
+}
+
+.delay-input:focus {
+    outline: none;
+    border-color: #007acc;
+}
+
+.delay-unit {
+    color: #888;
+    font-size: 11px;
+}
+
+.settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #3a3a3a;
+}
+
+.btn {
+    padding: 5px 12px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #3a3a3a;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn:hover {
+    background: #454545;
+}

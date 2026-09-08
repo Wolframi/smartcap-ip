@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.electron-data/
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+.codegraph/
+.serena/
+.cursor/
+capture-log.txt
+SmartCap_ALL_CODE.txt
+code.txt

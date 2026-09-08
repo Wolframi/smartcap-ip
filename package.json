@@ -1,0 +1,69 @@
+{
+  "name": "smartcap-ip",
+  "version": "1.0.0",
+  "description": "Скриншотер с отправкой на Agile-доску (клон с вводом IP)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "node-screenshots": "^0.2.8",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^40.4.1",
+    "electron-builder": "^25.1.8",
+    "nodemon": "^3.1.11",
+    "rcedit": "^5.0.2"
+  },
+  "build": {
+    "appId": "com.smartcap.ip.app",
+    "productName": "SmartCap-ip",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/main.js",
+      "src/preload.js",
+      "src/settings-preload.js",
+      "src/renderer/**/*",
+      "ico/**/*",
+      "icon.ico"
+    ],
+    "extraResources": [
+      {
+        "from": "icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-screenshots/**"
+    ],
+    "icon": "icon.ico",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "SmartCap-ip-${version}-portable.exe"
+    },
+    "afterPack": "scripts/afterPack.js"
+  }
+}

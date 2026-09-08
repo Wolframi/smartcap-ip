@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Настройки SmartCap</title>
+    <link rel="icon" href="../../icon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <div class="settings">
+        <header class="settings-header">Настройки</header>
+
+        <nav class="settings-tabs" aria-label="Разделы настроек">
+            <button type="button" class="settings-tab active" data-tab="board">Доска</button>
+            <button type="button" class="settings-tab" data-tab="hotkeys">Клавиши</button>
+        </nav>
+
+        <div id="settings-tab-board" class="settings-tab-panel active">
+            <section class="settings-section">
+                <label class="setting-toggle-row">
+                    <input type="checkbox" id="remember-create-defaults">
+                    <span>Закрепить доску и колонку для «Создать новую» и «Добавить к существующей»</span>
+                </label>
+                <p class="settings-board-note">С галочкой: закреплённые значения подставляются в каждом новом скриншоте. Доска, колонка и карточка дополняются по мере выбора в формах (сначала доска, потом колонка и т.д.). Без галочки — только последний выбор.</p>
+                <p id="remember-saved-label" class="remember-saved-label"></p>
+                <p id="board-hint" class="hint"></p>
+            </section>
+        </div>
+
+        <div id="settings-tab-hotkeys" class="settings-tab-panel" hidden>
+            <section class="settings-section">
+                <div class="setting-row">
+                    <span class="setting-label">Горячая клавиша</span>
+                    <button type="button" id="hotkey-btn" class="hotkey-btn" title="Нажмите, чтобы изменить">Ctrl+Alt+S</button>
+                </div>
+            </section>
+            <section class="settings-section settings-section-divider">
+                <div class="setting-row">
+                    <span class="setting-label">Доп. комбинация</span>
+                    <button type="button" id="delayed-hotkey-btn" class="hotkey-btn" title="Нажмите, чтобы изменить">Не задана</button>
+                </div>
+                <div class="setting-row setting-row-delay">
+                    <span class="setting-label">Задержка перед захватом</span>
+                    <div class="delay-input-wrap">
+                        <input type="number" id="delay-ms" class="delay-input" min="0" max="60000" step="100" value="3000">
+                        <span class="delay-unit">мс</span>
+                    </div>
+                </div>
+                <p id="hint" class="hint"></p>
+            </section>
+        </div>
+
+        <footer class="settings-footer">
+            <button type="button" id="btn-close" class="btn">Закрыть</button>
+        </footer>
+    </div>
+    <script src="js/settings-board.js"></script>
+    <script src="js/settings-app.js"></script>
+</body>
+</html>
